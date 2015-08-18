@@ -33,7 +33,8 @@ Documentation:
 		'name_change': triggers when someone changes their username
 		'voice_update': triggers when someone changes voice settings
 		'new_user': triggers when a new user is added to discord
-		'channel_update': triggers when a channel is edited?
+		'channel_update': triggers when a channel is modified
+		'channel_create': triggers when a channel is created
 
 */
 
@@ -288,14 +289,19 @@ module.exports = function(email, password, twitch_id) {
 		bot.trigger('new_user', data);
 	});
 
+	onsock('GUILD_MEMBER_UPDATE', function(obj) {
+		// i think this happens when someone's role is changed
+	});
+
 	onsock('CHANNEL_UPDATE', function(obj) {
 		// not entirely sure what this does yet
 		bot.trigger('channel_update', obj);
 	});
 
-	/*onsock('CHANNEL_CREATE', function(obj) {
-
-	});*/
+	onsock('CHANNEL_CREATE', function(obj) {
+		// for public channels and private chats
+		bot.trigger('channel_create', obj);
+	});
 
 	/* bot methods */
 	this.send_chat = function(channel, msg) {
