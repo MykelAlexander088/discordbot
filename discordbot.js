@@ -22,7 +22,8 @@ Documentation:
 	triggered. All events pass an object to the callback function.
 
 	Events:
-
+		
+		'init': triggers when the bot is ready to roll
 		'chat': triggers when someone sends a message
 		'edit': triggers when someone edits their message
 		'delete': triggers when someone deletes a message
@@ -34,7 +35,7 @@ Documentation:
 
 */
 
-module.exports = function(email, password) {
+module.exports = function(email, password, twitch_id) {
 	var bot = this;
 	var req_options = {
 		json: true,
@@ -153,6 +154,8 @@ module.exports = function(email, password) {
 					ws_event(temp_queue[i]);
 				}
 				temp_queue = undefined;
+
+				bot.trigger('init');
 			});
 		}
 	}
@@ -310,15 +313,15 @@ module.exports = function(email, password) {
 	};
 
 	this.check_stream = function(callback) {
+		if (!twitch_id) {
+			return;
+		}
 		var options = {
 			headers: {
-				'Client-ID': '', // twitch api client id
+				'Client-ID': twitch_id, // twitch api client id
 				'Accept': 'application/vnd.twitchtv.v3+json'
 			}
 		};
-		if (!options.headers['Client-ID']) {
-			return;
-		}
 		needle.get('https://api.twitch.tv/kraken/streams/nairomk', options, function(err, res) {
 			if (err) {
 				throw err;
@@ -344,4 +347,4 @@ module.exports = function(email, password) {
 	function request(method, url, data, callback) {
 		needle.request(method, "https://discordapp.com/api" + url, data, req_options, callback);
 	}
-}
+};
