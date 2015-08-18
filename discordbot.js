@@ -30,8 +30,10 @@ Documentation:
 		'typing': triggers when someone starts typing
 		'user_join': triggers when someone joins discord
 		'user_leave': triggers when someone leaves discord
+		'name_change': triggers when someone changes their username
 		'voice_update': triggers when someone changes voice settings
 		'new_user': triggers when a new user is added to discord
+		'channel_update': triggers when a channel is edited?
 
 */
 
@@ -140,6 +142,15 @@ module.exports = function(email, password, twitch_id) {
 					id: channel.id
 				};
 			});
+			
+			// list of existing PMs
+			var chats = data.private_channels;
+			server.private_chats = chats.map(function(chat) {
+				return {
+					channel_id: chat.id,
+					user_id: chat.recipient.id
+				};
+			});
 
 			// heartbeat so we stay connected to the server
 			setInterval(function() {
@@ -154,7 +165,7 @@ module.exports = function(email, password, twitch_id) {
 					ws_event(temp_queue[i]);
 				}
 				temp_queue = undefined;
-
+				console.log(bot.self.username + ' now running!');
 				bot.trigger('init');
 			});
 		}
@@ -164,6 +175,7 @@ module.exports = function(email, password, twitch_id) {
 	var server = {
 		users: [],
 		channels: [],
+		private_chats: [],
 		nairo_stream: false
 	};
 
@@ -219,7 +231,7 @@ module.exports = function(email, password, twitch_id) {
 		var data = {
 			msg: obj.content,
 			channel: obj.channel_id,
-			user: obj.author
+			user: bot.get_user(obj.author.id)
 		};
 
 		bot.trigger('chat', data);
@@ -276,6 +288,15 @@ module.exports = function(email, password, twitch_id) {
 		bot.trigger('new_user', data);
 	});
 
+	onsock('CHANNEL_UPDATE', function(obj) {
+		// not entirely sure what this does yet
+		bot.trigger('channel_update', obj);
+	});
+
+	/*onsock('CHANNEL_CREATE', function(obj) {
+
+	});*/
+
 	/* bot methods */
 	this.send_chat = function(channel, msg) {
 		var data = {
@@ -283,6 +304,32 @@ module.exports = function(email, password, twitch_id) {
 			mentions: []
 		};
 		request('post', '/channels/' + channel + '/messages', data);
+	};
+
+	this.private_message = function(user, msg) {
+		var channel = null;
+		for (var i = 0; i < server.private_chats.length; i++) {
+			if (server.private_chats[i].user_id == user.id) {
+				channel = server.private_chats[i].channel_id;
+				break;
+			}
+		}
+		if (!channel) {
+			var payload = {recipient_id: user.id};
+			request("post", "/users/" + bot.self.id + "/channels", payload, function(err, res) {
+				if (err) {
+					throw err;
+				}
+				channel = res.body.id;
+				server.private_chats.push({
+					channel_id: channel,
+					user_id: user.id
+				});
+				bot.send_chat(channel, msg);
+			});
+		} else {
+			bot.send_chat(channel, msg);
+		}
 	};
 
 	this.get_channel = function(arg) {
