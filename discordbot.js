@@ -290,7 +290,17 @@ module.exports = function(email, password, twitch_id) {
 	});
 
 	onsock('GUILD_MEMBER_UPDATE', function(obj) {
-		// i think this happens when someone's role is changed
+		var data = {
+			roles: obj.roles
+		};
+		for (var i = 0; i < server.users.length; i++) {
+			if (server.users[i].id == obj.user.id) {
+				data.user = server.users[i];
+				server.users[i].roles = obj.roles;
+			}
+		}
+
+		bot.trigger('role_update', data);
 	});
 
 	onsock('CHANNEL_UPDATE', function(obj) {
