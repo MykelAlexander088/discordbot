@@ -100,7 +100,8 @@ module.exports = function(email, password, twitch_id) {
 			try {
 				var data = JSON.parse(msg);
 			} catch (err) {
-				var data = msg;
+				console.log('ERROR WITH JSON PARSE: ');
+				console.log(msg);
 			}
 			var event_type = data.t;
 			if (event_type == 'READY') {
