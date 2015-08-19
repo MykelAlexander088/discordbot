@@ -35,7 +35,6 @@ Documentation:
 		'new_user': triggers when a new user is added to discord
 		'channel_update': triggers when a channel is modified
 		'channel_create': triggers when a channel is created
-		'channel_delete': triggers when a channel is deleted
 
 */
 
@@ -97,12 +96,7 @@ module.exports = function(email, password, twitch_id) {
 			};
 		}
 		function ws_event(msg) {
-			try {
-				var data = JSON.parse(msg);
-			} catch (err) {
-				console.log('ERROR WITH JSON PARSE: ');
-				console.log(msg);
-			}
+			var data = JSON.parse(msg);
 			var event_type = data.t;
 			if (event_type == 'READY') {
 				init(data.d);
@@ -159,9 +153,6 @@ module.exports = function(email, password, twitch_id) {
 				};
 			});
 
-			// list of existing roles
-			server.roles = data.guilds[0].roles;
-
 			// heartbeat so we stay connected to the server
 			setInterval(function() {
 				ws.send({op: 1, d: Date.now()});
@@ -186,7 +177,6 @@ module.exports = function(email, password, twitch_id) {
 		users: [],
 		channels: [],
 		private_chats: [],
-		roles: [],
 		nairo_stream: false
 	};
 
@@ -286,10 +276,6 @@ module.exports = function(email, password, twitch_id) {
 		bot.trigger('voice_update', obj);
 	});
 
-	onsock('GUILD_UPDATE', function(obj) {
-		server.roles = obj.roles;
-	});
-
 	onsock('GUILD_MEMBER_ADD', function(obj) {
 		var data = {
 			username: obj.user.username,
@@ -311,54 +297,20 @@ module.exports = function(email, password, twitch_id) {
 			if (server.users[i].id == obj.user.id) {
 				data.user = server.users[i];
 				server.users[i].roles = obj.roles;
-				bot.trigger('role_update', data);
-				break;
 			}
 		}
-	});
 
-	onsock('GUILD_MEMBER_REMOVE', function(obj) {
-		var user = obj.user;
-		for (var i = 0; i < server.users.length; i++) {
-			if (server.users[i].id == user.id) {
-				server.users.splice(i, 1);
-				bot.trigger('user_remove', user);
-				break;
-			}
-		}
+		bot.trigger('role_update', data);
 	});
 
 	onsock('CHANNEL_UPDATE', function(obj) {
-		for (var i = 0; i < server.channels.length; i++) {
-			if (server.channels[i].id == obj.id) {
-				server.channels[i].name = obj.name;
-				break;
-			}
-		}
+		// not entirely sure what this does yet
 		bot.trigger('channel_update', obj);
 	});
 
 	onsock('CHANNEL_CREATE', function(obj) {
-		if (!obj.is_private && obj.type == text) {
-			server.channels.push({
-				name: obj.name,
-				id: obj.id
-			});
-
-			bot.trigger('channel_create', obj);
-		}
-	});
-
-	onsock('CHANNEL_DELETE', function(obj) {
-		if (!obj.is_private && obj.type == text) {
-			for (var i = 0; i < server.channels.length; i++) {
-				if (server.channels[i].id == obj.id) {
-					server.channels.splice(i, 1);
-					bot.trigger('channel_delete', obj);
-					break;
-				}
-			}
-		}
+		// for public channels and private chats
+		bot.trigger('channel_create', obj);
 	});
 
 	/* bot methods */
